@@ -34,7 +34,6 @@ server.post('/participants', async (req, res) => {
         res.sendStatus(500);
     }
 });
-//
 
 server.get('/participants', async (req, res) => {
     try {
@@ -60,7 +59,15 @@ server.post('/messages', async (req, res) => {
         if (flag === 0) {
             res.sendStatus(422);
         } else {
-            res.send(req.headers.user);
+            if (!req.body.to || !req.body.text || !req.body.type) {
+                res.sendStatus(422);
+            } else if (req.body.type !== "private_message" && req.body.type !== "message") {
+                res.sendStatus(422);
+            } else {
+                const time = `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`;
+                db.collection('messages').insertOne({ to: req.body.to, text: req.body.text, type: req.body.type, time: time })
+                res.sendStatus(201);
+            }
         }
     } catch (error) {
         console.log(error);
