@@ -34,6 +34,7 @@ server.post('/participants', async (req, res) => {
         res.sendStatus(500);
     }
 });
+//
 
 server.get('/participants', async (req, res) => {
     try {
