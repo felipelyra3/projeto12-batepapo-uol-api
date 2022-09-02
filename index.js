@@ -23,12 +23,17 @@ const participantsSchema = Joi.object({
         .required()
 });
 
-const messagesSchema = joi.object({
-    from: joi.string().required,
-    to: joi.string().required,
-    text: joi.string().required,
-    type: joi.string().required
+const messagesSchema = Joi.object({
+    to: Joi.string().empty('').required(),
+    text: Joi.string().empty('').required(),
+    type: Joi.string().empty('').valid('message', 'private_message').required()
 });
+
+/* const messagesSchema = Joi.object({
+    to: Joi.string().empty('').required,
+    text: Joi.string().empty('').required,
+    type: Joi.string().valid('message', 'private_message').required
+}); */
 
 // ****Creating and Listing Participants****//
 server.post('/participants', async (req, res) => {
@@ -47,7 +52,7 @@ server.post('/participants', async (req, res) => {
             res.sendStatus(409);
         } */
         if (!search) {
-            const participantsValidation = await participantsSchema.validateAsync(req.body);
+            await participantsSchema.validateAsync(req.body);
             db.collection('participants').insertOne({ name: req.body.name, lastStatus: Date.now() });
             const time = `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`;
             db.collection('messages').insertOne({ from: req.body.name, to: 'Todos', text: 'entra na sala...', type: 'status', time: time });
@@ -74,7 +79,7 @@ server.get('/participants', async (req, res) => {
 // ****Creating and listing messages**** //
 server.post('/messages', async (req, res) => {
     try {
-        const participants = await db.collection('participants').find().toArray();
+        /* const participants = await db.collection('participants').find().toArray();
         let flag = 0;
         for (let i = 0; i < participants.length; i++) {
             if (participants[i].name === req.headers.user) {
@@ -94,10 +99,19 @@ server.post('/messages', async (req, res) => {
                 db.collection('messages').insertOne({ to: req.body.to, text: req.body.text, type: req.body.type, time: time })
                 res.sendStatus(201);
             }
+        } */
+        //const messagesValidation = await messagesSchema.validateAsync(req.body);
+        const participants = await db.collection('participants').find().toArray();
+        await messagesSchema.validateAsync(req.body);
+        if (participants.some(participant => participant.name === req.headers.user)) {
+            const time = `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`;
+            db.collection('messages').insertOne({ from: req.headers.user, to: req.body.to, text: req.body.text, type: req.body.type, time: time })
+            res.sendStatus(201);
+        } else {
+            res.sendStatus(422);
         }
     } catch (error) {
-        console.log(error);
-        res.sendStatus(500);
+        res.status(422).send(error.details.map((detail) => detail.message));
     }
 });
 
