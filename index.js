@@ -6,7 +6,7 @@ import joi from "joi";
 import Joi from "joi";
 dotenv.config();
 
-const mongoClient = new MongoClient('mongodb://localhost:27017');
+const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
 mongoClient.connect(() => {
     db = mongoClient.db("batepapouol");
@@ -149,5 +149,17 @@ server.post('/status', async (req, res) => {
         res.status(422).send(error.details.map((detail) => detail.message));
     }
 });
+
+setInterval(async () => {
+    const participants = await db.collection('participants').find().toArray();
+    for (let i = 0; i < participants.length; i++) {
+        if ((Date.now() - participants[i].lastStatus) > 10000) {
+            console.log(participants[i].name);
+            await db.collection('participants').deleteOne({ name: participants[i].name });
+            const time = `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`;
+            db.collection('messages').insertOne({ from: participants[i].name, to: 'Todos', text: 'sai da sala...', type: 'status', time: time });
+        }
+    }
+}, 15000);
 
 server.listen(5000, () => { console.log("Server is litening on port 5000") });
