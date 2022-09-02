@@ -1,7 +1,9 @@
 import express from "express";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from 'dotenv';
 import dayjs from 'dayjs';
+import joi from "joi";
+import Joi from "joi";
 dotenv.config();
 
 const mongoClient = new MongoClient('mongodb://localhost:27017');
@@ -13,11 +15,26 @@ mongoClient.connect(() => {
 const server = express();
 server.use(express.json());
 
+// ****Schema**** //
+const participantsSchema = Joi.object({
+    name: Joi.string()
+        .alphanum()
+        .empty('')
+        .required()
+});
+
+const messagesSchema = joi.object({
+    from: joi.string().required,
+    to: joi.string().required,
+    text: joi.string().required,
+    type: joi.string().required
+});
+
 // ****Creating and Listing Participants****//
 server.post('/participants', async (req, res) => {
     try {
         const search = await db.collection('participants').findOne({ name: req.body.name });
-        if (!search) {
+        /* if (!search) {
             if (!req.body.name) {
                 res.sendStatus(422);
             } else {
@@ -28,10 +45,19 @@ server.post('/participants', async (req, res) => {
             }
         } else {
             res.sendStatus(409);
+        } */
+        if (!search) {
+            const participantsValidation = await participantsSchema.validateAsync(req.body);
+            db.collection('participants').insertOne({ name: req.body.name, lastStatus: Date.now() });
+            const time = `${dayjs().hour()}:${dayjs().minute()}:${dayjs().second()}`;
+            db.collection('messages').insertOne({ from: req.body.name, to: 'Todos', text: 'entra na sala...', type: 'status', time: time });
+            res.sendStatus(201);
+        } else {
+            res.sendStatus(409);
         }
+
     } catch (error) {
-        console.log(error);
-        res.sendStatus(500);
+        res.status(422).send(error.details.map((detail) => detail.message));
     }
 });
 
