@@ -29,12 +29,6 @@ const messagesSchema = Joi.object({
     type: Joi.string().empty('').valid('message', 'private_message').required()
 });
 
-/* const messagesSchema = Joi.object({
-    to: Joi.string().empty('').required,
-    text: Joi.string().empty('').required,
-    type: Joi.string().valid('message', 'private_message').required
-}); */
-
 // ****Creating and Listing Participants****//
 server.post('/participants', async (req, res) => {
     try {
@@ -138,8 +132,21 @@ server.get('/messages', async (req, res) => {
             res.send(limitedMessages);
         }
     } catch (error) {
-        console.log(error);
         res.sendStatus(500);
+    }
+});
+
+server.post('/status', async (req, res) => {
+    try {
+        const participants = await db.collection('participants').find().toArray();
+        if (participants.some(participant => participant.name === req.headers.user)) {
+            db.collection('participants').update({ name: req.headers.user }, { $set: { lastStatus: Date.now() } });
+            res.sendStatus(200);
+        } else {
+            res.sendStatus(404);
+        }
+    } catch (error) {
+        res.status(422).send(error.details.map((detail) => detail.message));
     }
 });
 
