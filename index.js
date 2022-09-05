@@ -136,6 +136,7 @@ server.get('/messages', async (req, res) => {
     }
 });
 
+// **** Status updade, verifies if someone's still online **** //
 server.post('/status', async (req, res) => {
     try {
         const participants = await db.collection('participants').find().toArray();
@@ -150,6 +151,7 @@ server.post('/status', async (req, res) => {
     }
 });
 
+// **** "Disconnects who's not online anymore. Deletes them from the participants list" **** //
 setInterval(async () => {
     const participants = await db.collection('participants').find().toArray();
     for (let i = 0; i < participants.length; i++) {
